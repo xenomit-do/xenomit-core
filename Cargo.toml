@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/xenomit-logging"]
+members = ["crates/xenomit-core", "crates/xenomit-logging"]
 
 [workspace.package]
 edition = "2024"

@@ -6,18 +6,21 @@ Shared functionality for xenomit services.
 
 | Crate | Purpose |
 | --- | --- |
+| [`xenomit_core`](crates/xenomit-core) | Facade re-exporting the `xenomit_*` crates — depend on this one |
 | [`xenomit_logging`](crates/xenomit-logging) | `tracing` instrumentation wired to a redacting console layer and OTLP (OpenTelemetry) export |
 
-## xenomit_logging
+## usage
 
 Services instrument with the `tracing` facade (`info!`, `warn!`,
 `#[instrument]`, …) and call `init` once at startup:
 
 ```rust
+use xenomit_core::logging;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let _guard = xenomit_logging::init("xenomit-client")?;
-    tracing::info!("started");
+    let _guard = logging::init("xenomit-client")?;
+    logging::tracing::info!("started");
     Ok(())
 }
 ```
@@ -37,9 +40,9 @@ Drop the returned guard before the tokio runtime exits to flush buffered
 telemetry.
 
 ```rust
-use xenomit_logging::{Config, Otlp};
+use xenomit_core::logging::{self, Config, Otlp};
 
-let _guard = xenomit_logging::init_with(
+let _guard = logging::init_with(
     Config::new("xenomit-backpage")
         .with_service_version(env!("CARGO_PKG_VERSION"))
         .with_filter("info,xenomit_backpage=debug")
@@ -48,8 +51,10 @@ let _guard = xenomit_logging::init_with(
 ```
 
 Filtering follows the `RUST_LOG`/`EnvFilter` directives; `with_filter`
-overrides `RUST_LOG`. Try the demo:
+overrides `RUST_LOG`. A service that only wants logging and nothing else can
+also depend on `xenomit_logging` directly — the API is identical. Try the
+demo:
 
 ```sh
-cargo run -p xenomit_logging --example basic
+cargo run -p xenomit_core --example logging
 ```
