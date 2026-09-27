@@ -8,7 +8,7 @@ use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::fmt::writer::MakeWriter;
 use tracing_subscriber::layer::{Context, Layer};
 
-use crate::redact::redact;
+use super::redact::redact;
 
 /// Console output in the style of `xenomit-client`'s diagnostics: one line per
 /// event on stderr, message and fields redacted, and a cap per

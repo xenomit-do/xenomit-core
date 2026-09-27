@@ -1011,14 +1011,6 @@ checksum = "f17a85883d4e6d00e8a97c586de764dabcc06133f7f1d55dce5cdc070ad7fe59"
 name = "xenomit_core"
 version = "0.1.0"
 dependencies = [
- "tokio",
- "xenomit_logging",
-]
-
-[[package]]
-name = "xenomit_logging"
-version = "0.1.0"
-dependencies = [
  "opentelemetry",
  "opentelemetry-appender-tracing",
  "opentelemetry-otlp",

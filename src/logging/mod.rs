@@ -12,7 +12,7 @@
 //!   so they correlate with the traces produced by `#[tracing::instrument]`.
 //!
 //! ```no_run
-//! use xenomit_logging as logging;
+//! use xenomit_core::logging;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {

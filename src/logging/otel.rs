@@ -7,8 +7,8 @@ use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
 use opentelemetry_sdk::trace::{SdkTracer, SdkTracerProvider};
 
-use crate::Error;
-use crate::config::{Config, Otlp};
+use super::Error;
+use super::config::{Config, Otlp};
 
 /// Environment variables that turn on [`Otlp::Auto`] export.
 const ENDPOINT_VARS: &[&str] = &[

@@ -1,15 +1,9 @@
 # xenomit-core
 
-Shared functionality for xenomit services.
+Shared functionality for xenomit services. Currently: `logging`, a `tracing`
+setup wired to a redacting console layer and OTLP (OpenTelemetry) export.
 
-## crates
-
-| Crate | Purpose |
-| --- | --- |
-| [`xenomit_core`](crates/xenomit-core) | Facade re-exporting the `xenomit_*` crates — depend on this one |
-| [`xenomit_logging`](crates/xenomit-logging) | `tracing` instrumentation wired to a redacting console layer and OTLP (OpenTelemetry) export |
-
-## usage
+## logging
 
 Services instrument with the `tracing` facade (`info!`, `warn!`,
 `#[instrument]`, …) and call `init` once at startup:
@@ -51,9 +45,7 @@ let _guard = logging::init_with(
 ```
 
 Filtering follows the `RUST_LOG`/`EnvFilter` directives; `with_filter`
-overrides `RUST_LOG`. A service that only wants logging and nothing else can
-also depend on `xenomit_logging` directly — the API is identical. Try the
-demo:
+overrides `RUST_LOG`. Try the demo:
 
 ```sh
 cargo run -p xenomit_core --example logging

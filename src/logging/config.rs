@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use tracing_subscriber::filter::EnvFilter;
 
-use crate::Error;
+use super::Error;
 
 /// Default verbosity when neither [`Config::filter`] nor `RUST_LOG` is set.
 const DEFAULT_FILTER: &str = "info";
