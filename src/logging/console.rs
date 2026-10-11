@@ -8,7 +8,7 @@ use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::fmt::writer::MakeWriter;
 use tracing_subscriber::layer::{Context, Layer};
 
-use super::redact::redact;
+use super::redact::Redactor;
 
 /// Console output in the style of `xenomit-client`'s diagnostics: one line per
 /// event on stderr, message and fields redacted, and a cap per
@@ -17,15 +17,22 @@ pub(crate) struct Console<W> {
     service: Box<str>,
     writer: W,
     event_cap: Option<usize>,
+    redactor: Redactor,
     /// Count of emitted events per `(target, level)` for rate limiting.
     emitted: Mutex<HashMap<(Box<str>, Level), usize>>,
 }
 
-pub(crate) fn layer<W>(service: &str, writer: W, event_cap: Option<usize>) -> Console<W> {
+pub(crate) fn layer<W>(
+    service: &str,
+    writer: W,
+    event_cap: Option<usize>,
+    redactor: Redactor,
+) -> Console<W> {
     Console {
         service: service.into(),
         writer,
         event_cap,
+        redactor,
         emitted: Mutex::new(HashMap::new()),
     }
 }
@@ -53,10 +60,13 @@ where
         );
         if let Some(message) = &fields.message {
             line.push(' ');
-            line.push_str(&redact(message));
+            line.push_str(&self.redactor.text(message));
         }
         for (key, value) in &fields.fields {
-            let _ = fmt::Write::write_fmt(&mut line, format_args!(" {key}={}", redact(value)));
+            let _ = fmt::Write::write_fmt(
+                &mut line,
+                format_args!(" {key}={}", self.redactor.value(key, value)),
+            );
         }
         line.push('\n');
 
@@ -170,8 +180,12 @@ mod tests {
     fn with_console(cap: Option<usize>) -> (impl SubscriberInitExt, Buf) {
         let buf = Buf::default();
         let writer = buf.clone();
-        let registry =
-            tracing_subscriber::registry().with(layer("test", move || writer.clone(), cap));
+        let registry = tracing_subscriber::registry().with(layer(
+            "test",
+            move || writer.clone(),
+            cap,
+            Redactor::default(),
+        ));
         (registry, buf)
     }
 

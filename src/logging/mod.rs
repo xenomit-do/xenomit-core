@@ -6,10 +6,13 @@
 //! * a redacting console layer on stderr (modeled on `xenomit-client`'s
 //!   diagnostics — URLs, session ids and tokens never reach the terminal, and
 //!   noisy targets are rate-capped), and
-//! * OpenTelemetry: spans are exported as OTLP traces and events as OTLP log
-//!   records when `OTEL_EXPORTER_OTLP_ENDPOINT` (or a signal-specific
-//!   endpoint) points at a collector. Log records carry `trace_id`/`span_id`
-//!   so they correlate with the traces produced by `#[tracing::instrument]`.
+//! * OpenTelemetry: spans are exported as OTLP traces, events as OTLP log
+//!   records and instruments as OTLP metrics when
+//!   `OTEL_EXPORTER_OTLP_ENDPOINT` (or a signal-specific endpoint) points at
+//!   a collector. Every exported span and log record passes through the same
+//!   [`Redactor`] as the console — a session id in a log line never reaches
+//!   the backend. Log records carry `trace_id`/`span_id` so they correlate
+//!   with the traces produced by `#[tracing::instrument]`.
 //!
 //! ```no_run
 //! use xenomit_core::logging;
@@ -29,10 +32,20 @@ mod error;
 mod otel;
 mod redact;
 
+pub mod metrics;
+pub mod propagation;
+#[cfg(feature = "testing")]
+pub mod testing;
+
 pub use config::{Config, Otlp};
 pub use error::Error;
+pub use otel::{RedactingLogExporter, RedactingSpanExporter};
+pub use redact::Redactor;
 
-// Re-export the instrumentation facade so services only need this crate.
+// Re-export the instrumentation facades so services only need this crate:
+// `tracing` for call sites, `opentelemetry` for `KeyValue` attributes,
+// `metrics` instrument types and propagation `Context`s.
+pub use opentelemetry;
 pub use tracing;
 
 use tracing_subscriber::layer::SubscriberExt;
@@ -53,9 +66,21 @@ pub fn init(service_name: impl Into<std::borrow::Cow<'static, str>>) -> Result<G
 pub fn init_with(config: Config) -> Result<Guard, Error> {
     let filter = config.env_filter()?;
 
-    let console = config
-        .console
-        .then(|| console::layer(&config.service_name, std::io::stderr, config.event_cap));
+    // Advertise W3C trace-context propagation even when export is off:
+    // `propagation::inject`/`extract` stay meaningful for processes that
+    // receive a `traceparent` but have no collector configured.
+    opentelemetry::global::set_text_map_propagator(
+        opentelemetry_sdk::propagation::TraceContextPropagator::new(),
+    );
+
+    let console = config.console.then(|| {
+        console::layer(
+            &config.service_name,
+            std::io::stderr,
+            config.event_cap,
+            config.redactor.clone(),
+        )
+    });
 
     let pipelines = otel::build(&config)?;
 
@@ -122,6 +147,11 @@ impl Guard {
         // Logs go last so a "shutting down" record still finds its trace.
         if let Err(error) = pipelines.tracer_provider.shutdown() {
             eprintln!("[xenomit-logging] tracer shutdown failed: {error:?}");
+        }
+        if let Some(meter_provider) = pipelines.meter_provider
+            && let Err(error) = meter_provider.shutdown()
+        {
+            eprintln!("[xenomit-logging] meter shutdown failed: {error:?}");
         }
         if let Err(error) = pipelines.logger_provider.shutdown() {
             eprintln!("[xenomit-logging] logger shutdown failed: {error:?}");
