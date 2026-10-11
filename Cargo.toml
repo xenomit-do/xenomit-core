@@ -1,0 +1,30 @@
+[package]
+name = "xenomit_core"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Shared functionality for xenomit services"
+
+[features]
+# In-memory OTLP capture for consumer tests (`logging::testing`).
+testing = ["opentelemetry_sdk/testing"]
+
+[dependencies]
+opentelemetry = { version = "0.32", features = ["logs", "metrics"] }
+opentelemetry_sdk = { version = "0.32", features = ["logs", "metrics", "rt-tokio"] }
+opentelemetry-otlp = { version = "0.32", default-features = false, features = [
+    "trace",
+    "logs",
+    "metrics",
+    "grpc-tonic",
+] }
+opentelemetry-appender-tracing = "0.32"
+thiserror = "2"
+tokio = { version = "1", features = ["rt"] }
+tracing = "0.1"
+tracing-opentelemetry = "0.33"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+[dev-dependencies]
+opentelemetry_sdk = { version = "0.32", features = ["testing"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
